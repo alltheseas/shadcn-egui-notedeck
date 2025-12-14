@@ -1,0 +1,6 @@
+# Patterns directory
+#
+# This directory will contain higher-level UI patterns:
+# - form.rs - Form layout and validation patterns
+# - layouts.rs - Common layout patterns
+# - And more as patterns emerge during component development

@@ -1,0 +1,10 @@
+# Components directory
+#
+# This directory will contain individual component implementations:
+# - badge.rs - Badge component (Phase 2)
+# - avatar.rs - Avatar component (Phase 2)
+# - card.rs - Card component (Phase 2)
+# - alert.rs - Alert component (Phase 2)
+# - skeleton.rs - Skeleton loading component (Phase 2)
+# - kbd.rs - Keyboard shortcut display (Phase 2)
+# - And more as we progress through the phases
