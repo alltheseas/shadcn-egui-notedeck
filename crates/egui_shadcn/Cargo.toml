@@ -3,15 +3,12 @@ name = "egui_shadcn"
 version = "0.1.0"
 authors = ["shadcn-egui contributors"]
 description = "shadcn/ui design system and components for egui"
-edition = "2024"
-rust-version = "1.88"
+edition = "2021"
+rust-version = "1.76"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/emilk/egui"
+repository = "https://github.com/alltheseas/shadcn-egui-notedeck"
 categories = ["gui", "game-development"]
 keywords = ["gui", "egui", "shadcn", "components", "design-system"]
-
-[lints]
-workspace = true
 
 [lib]
 
@@ -28,10 +25,10 @@ card = []
 alert = []
 
 [dependencies]
-egui = { workspace = true, default-features = false }
-emath = { workspace = true, default-features = false }
-epaint = { workspace = true, default-features = false }
+egui = { version = "0.33.3", default-features = false }
+emath = { version = "0.33.3", default-features = false }
+epaint = { version = "0.33.3", default-features = false }
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 
 [dev-dependencies]
-eframe = { workspace = true, default-features = true }
+eframe = { version = "0.33.3", default-features = true }
