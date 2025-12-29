@@ -189,21 +189,24 @@ impl Toaster {
                 .fixed_pos(toast_pos)
                 .show(ctx, |ui| {
                     // Colors based on variant
-                    let (bg_color, border_color, title_color) = match toast.variant {
+                    let (bg_color, border_color, title_color, desc_color) = match toast.variant {
                         ToastVariant::Default => (
                             theme.colors.background,
                             theme.colors.border,
                             theme.colors.foreground,
+                            theme.colors.muted_foreground,
                         ),
                         ToastVariant::Success => (
                             theme.colors.background,
                             egui::Color32::from_rgb(34, 197, 94), // Green
                             theme.colors.foreground,
+                            theme.colors.muted_foreground,
                         ),
                         ToastVariant::Destructive => (
-                            theme.colors.destructive.linear_multiply(0.1),
                             theme.colors.destructive,
                             theme.colors.destructive,
+                            theme.colors.destructive_foreground,
+                            theme.colors.destructive_foreground.linear_multiply(0.85),
                         ),
                     };
 
@@ -233,7 +236,7 @@ impl Toaster {
                                     ui.label(
                                         egui::RichText::new(desc)
                                             .size(theme.typography.small().size)
-                                            .color(theme.colors.foreground.linear_multiply(0.7)),
+                                            .color(desc_color),
                                     );
                                 }
                             });
@@ -245,7 +248,7 @@ impl Toaster {
                                     egui::Button::new(
                                         egui::RichText::new("X")
                                             .size(12.0)
-                                            .color(theme.colors.foreground.linear_multiply(0.5)),
+                                            .color(title_color.linear_multiply(0.7)),
                                     )
                                     .fill(egui::Color32::TRANSPARENT)
                                     .stroke(egui::Stroke::NONE),

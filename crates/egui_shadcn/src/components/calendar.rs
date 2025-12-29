@@ -318,9 +318,9 @@ impl<'a> Calendar<'a> {
             return;
         }
 
-        // Show years: future years first (next 10), then past years (last 100)
-        let future_years: Vec<i32> = ((current_year + 1)..=(current_year + 10)).rev().collect();
-        let past_years: Vec<i32> = ((current_year - 100)..=current_year).rev().collect();
+        // Show years in descending order: future years (current + 10) down to past years (current - 100)
+        // This gives a natural scrollable list with newest at top
+        let all_years: Vec<i32> = ((current_year - 100)..=(current_year + 10)).rev().collect();
 
         let area_id = dropdown_id.with("area");
         let area_response = egui::Area::new(area_id)
@@ -336,23 +336,7 @@ impl<'a> Calendar<'a> {
                     .show(ui, |ui| {
                         ui.set_max_height(200.0);
                         egui::ScrollArea::vertical().show(ui, |ui| {
-                            // Future years first (2026, 2027, ... 2035)
-                            for year in future_years.iter().rev() {
-                                let is_current = *year == current_year;
-                                let item_response = self.draw_dropdown_item(ui, theme, &year.to_string(), is_current, 50.0);
-                                if item_response.clicked() {
-                                    if let Some(new_date) = chrono::NaiveDate::from_ymd_opt(
-                                        *year,
-                                        self.view_date.month(),
-                                        1.min(self.view_date.day()),
-                                    ) {
-                                        *self.view_date = new_date;
-                                    }
-                                    ui.ctx().data_mut(|d| d.insert_temp(open_id, false));
-                                }
-                            }
-                            // Then current and past years (2025, 2024, 2023, ...)
-                            for year in past_years {
+                            for year in all_years {
                                 let is_current = year == current_year;
                                 let item_response = self.draw_dropdown_item(ui, theme, &year.to_string(), is_current, 50.0);
                                 if item_response.clicked() {

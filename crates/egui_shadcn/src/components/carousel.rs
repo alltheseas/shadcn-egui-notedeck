@@ -125,19 +125,25 @@ impl<'a> Carousel<'a> {
             match self.orientation {
                 CarouselOrientation::Horizontal => {
                     ui.horizontal(|ui| {
-                        // Previous button
+                        // Previous button - vertically centered with content
                         if self.show_buttons {
-                            let can_go_prev = self.loop_items || *self.current > 0;
-                            let prev_response = self.draw_nav_button(
-                                ui, &theme, button_size, true, can_go_prev
-                            );
-                            if prev_response.clicked() && can_go_prev {
-                                if *self.current > 0 {
-                                    *self.current -= 1;
-                                } else if self.loop_items && self.item_count > 0 {
-                                    *self.current = self.item_count - 1;
+                            ui.allocate_ui_with_layout(
+                                Vec2::new(button_size, self.item_size.y),
+                                egui::Layout::centered_and_justified(egui::Direction::TopDown),
+                                |ui| {
+                                    let can_go_prev = self.loop_items || *self.current > 0;
+                                    let prev_response = self.draw_nav_button(
+                                        ui, &theme, button_size, true, can_go_prev
+                                    );
+                                    if prev_response.clicked() && can_go_prev {
+                                        if *self.current > 0 {
+                                            *self.current -= 1;
+                                        } else if self.loop_items && self.item_count > 0 {
+                                            *self.current = self.item_count - 1;
+                                        }
+                                    }
                                 }
-                            }
+                            );
                             ui.add_space(button_margin);
                         }
 
@@ -171,20 +177,26 @@ impl<'a> Carousel<'a> {
                             }
                         });
 
-                        // Next button
+                        // Next button - vertically centered with content
                         if self.show_buttons {
                             ui.add_space(button_margin);
-                            let can_go_next = self.loop_items || *self.current < self.item_count.saturating_sub(1);
-                            let next_response = self.draw_nav_button(
-                                ui, &theme, button_size, false, can_go_next
-                            );
-                            if next_response.clicked() && can_go_next {
-                                if *self.current < self.item_count - 1 {
-                                    *self.current += 1;
-                                } else if self.loop_items {
-                                    *self.current = 0;
+                            ui.allocate_ui_with_layout(
+                                Vec2::new(button_size, self.item_size.y),
+                                egui::Layout::centered_and_justified(egui::Direction::TopDown),
+                                |ui| {
+                                    let can_go_next = self.loop_items || *self.current < self.item_count.saturating_sub(1);
+                                    let next_response = self.draw_nav_button(
+                                        ui, &theme, button_size, false, can_go_next
+                                    );
+                                    if next_response.clicked() && can_go_next {
+                                        if *self.current < self.item_count - 1 {
+                                            *self.current += 1;
+                                        } else if self.loop_items {
+                                            *self.current = 0;
+                                        }
+                                    }
                                 }
-                            }
+                            );
                         }
                     });
                 }
