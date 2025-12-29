@@ -109,6 +109,8 @@ struct ShowcaseApp {
     sidebar_open: bool,
     sidebar_selected: usize,
     account_menu_open: bool,
+    // AspectRatio demo state
+    selected_aspect_ratio: usize,
 }
 
 impl Default for ShowcaseApp {
@@ -155,6 +157,7 @@ impl Default for ShowcaseApp {
             sidebar_open: true,
             sidebar_selected: 0,
             account_menu_open: false,
+            selected_aspect_ratio: 0,
         }
     }
 }
@@ -735,10 +738,11 @@ impl eframe::App for ShowcaseApp {
                 .trigger(|ui, _is_open| {
                     // Shadcn style: semibold text with double chevron button right after
                     ui.horizontal(|ui| {
-                        // Semibold text
+                        // Semibold text - use theme foreground color for visibility
                         ui.label(egui::RichText::new("@peduarte starred 3 repositories")
                             .size(14.0)
-                            .strong());
+                            .strong()
+                            .color(theme.colors.foreground));
 
                         ui.add_space(8.0); // gap-4 in tailwind = 16px, but 8px looks cleaner
 
@@ -1095,57 +1099,72 @@ impl eframe::App for ShowcaseApp {
 
             ui.add_space(16.0);
 
-            ui.label("Aspect Ratio containers:");
+            ui.label("Aspect Ratio containers (click to bring to front):");
+            // Use a horizontal layout to position containers, then draw selected one on top
+            let configs = [
+                (AspectRatioPreset::Square, 100.0, "1:1", theme.colors.primary, theme.colors.primary_foreground, 0),
+                (AspectRatioPreset::Video, 160.0, "16:9", theme.colors.destructive, theme.colors.destructive_foreground, 1),
+                (AspectRatioPreset::Standard, 120.0, "4:3", theme.colors.accent, theme.colors.accent_foreground, 2),
+            ];
+
+            // First pass: allocate space and collect rects
+            let mut rects = Vec::new();
+            let mut clicked_index = None;
             ui.horizontal(|ui| {
-                // 1:1 Square
-                AspectRatio::new(AspectRatioPreset::Square)
-                    .max_width(100.0)
-                    .show(ui, |ui| {
-                        let rect = ui.available_rect_before_wrap();
-                        ui.painter().rect_filled(rect, 4.0, theme.colors.primary);
-                        ui.painter().text(
-                            rect.center(),
-                            egui::Align2::CENTER_CENTER,
-                            "1:1",
-                            egui::FontId::proportional(14.0),
-                            theme.colors.primary_foreground,
-                        );
-                    });
+                for (preset, max_width, _label, _bg_color, _fg_color, index) in &configs {
+                    let response = AspectRatio::new(*preset)
+                        .max_width(*max_width)
+                        .show(ui, |_ui| {});
 
-                ui.add_space(8.0);
-
-                // 16:9 Video
-                AspectRatio::new(AspectRatioPreset::Video)
-                    .max_width(160.0)
-                    .show(ui, |ui| {
-                        let rect = ui.available_rect_before_wrap();
-                        ui.painter().rect_filled(rect, 4.0, theme.colors.secondary);
-                        ui.painter().text(
-                            rect.center(),
-                            egui::Align2::CENTER_CENTER,
-                            "16:9",
-                            egui::FontId::proportional(14.0),
-                            theme.colors.secondary_foreground,
-                        );
-                    });
-
-                ui.add_space(8.0);
-
-                // 4:3 Standard
-                AspectRatio::new(AspectRatioPreset::Standard)
-                    .max_width(120.0)
-                    .show(ui, |ui| {
-                        let rect = ui.available_rect_before_wrap();
-                        ui.painter().rect_filled(rect, 4.0, theme.colors.accent);
-                        ui.painter().text(
-                            rect.center(),
-                            egui::Align2::CENTER_CENTER,
-                            "4:3",
-                            egui::FontId::proportional(14.0),
-                            theme.colors.accent_foreground,
-                        );
-                    });
+                    rects.push(response.rect);
+                    if response.response.clicked() {
+                        clicked_index = Some(*index);
+                    }
+                    if response.response.hovered() {
+                        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+                    }
+                    ui.add_space(8.0);
+                }
             });
+
+            if let Some(idx) = clicked_index {
+                self.selected_aspect_ratio = idx;
+            }
+
+            // Second pass: draw containers with selected one on top using foreground layer
+            let painter = ui.painter();
+            let fg_painter = ui.ctx().layer_painter(egui::LayerId::new(
+                egui::Order::Foreground,
+                egui::Id::new("aspect_ratio_selected"),
+            ));
+
+            for (i, ((_preset, _max_width, label, bg_color, fg_color, _index), rect)) in configs.iter().zip(rects.iter()).enumerate() {
+                let is_selected = self.selected_aspect_ratio == i;
+                let target_painter = if is_selected { &fg_painter } else { painter };
+
+                // Draw background
+                target_painter.rect_filled(*rect, 4.0, *bg_color);
+
+                // Draw selection border if selected
+                if is_selected {
+                    target_painter.rect_stroke(
+                        *rect,
+                        4.0,
+                        egui::Stroke::new(3.0, theme.colors.foreground),
+                        egui::StrokeKind::Outside,
+                    );
+                }
+
+                // Draw label
+                target_painter.text(
+                    rect.center(),
+                    egui::Align2::CENTER_CENTER,
+                    *label,
+                    egui::FontId::proportional(14.0),
+                    *fg_color,
+                );
+            }
+            ui.label(format!("Selected: {}", ["1:1 Square", "16:9 Video", "4:3 Standard"][self.selected_aspect_ratio]));
 
             ui.add_space(16.0);
 

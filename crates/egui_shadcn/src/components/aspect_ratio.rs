@@ -1,6 +1,20 @@
 //! Aspect Ratio component ported from shadcn/ui
 //!
-//! A container that maintains a specific aspect ratio for its content.
+//! A container that maintains a specific aspect ratio for its content,
+//! useful for responsive layouts where content should scale proportionally.
+//!
+//! ## When to use AspectRatio
+//!
+//! - **Images & thumbnails**: Ensure images maintain consistent proportions
+//! - **Video embeds**: Create 16:9 containers for video players
+//! - **Cards & tiles**: Create uniform grid layouts with consistent item shapes
+//! - **Responsive design**: Content that should scale while preserving proportions
+//!
+//! ## How it works
+//!
+//! The component takes the available width (or a constrained width via `max_width`)
+//! and calculates the height based on the specified ratio. Content is rendered
+//! within this fixed-proportion container with clipping enabled.
 //!
 //! Reference: <https://ui.shadcn.com/docs/components/aspect-ratio>
 
@@ -108,8 +122,8 @@ impl AspectRatio {
         let height = width / self.ratio;
         let size = Vec2::new(width, height);
 
-        // Allocate the space
-        let (rect, response) = ui.allocate_exact_size(size, egui::Sense::hover());
+        // Allocate the space (with click sense for interactivity)
+        let (rect, response) = ui.allocate_exact_size(size, egui::Sense::click());
 
         // Create a child UI constrained to the rect
         let mut inner = None;
