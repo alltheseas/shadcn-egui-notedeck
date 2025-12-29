@@ -1,216 +1,161 @@
-# Comprehensive shadcn/ui Component Audit
+# Component Audit
 
-Complete comparison of all 59 shadcn/ui components vs our egui_shadcn implementation.
+> Last updated: December 28, 2025
 
-## Legend
-- ✅ Implemented and matches shadcn closely
-- ⚠️ Implemented but needs improvement
-- ❌ Not implemented
-- 🔄 In progress
-- 🚫 Not applicable to egui (web-only feature)
+This document tracks the implementation status of all shadcn/ui components ported to egui.
 
-## Component Status
+## Summary
 
-### Form Controls & Input
+| Status | Count | Percentage |
+|--------|-------|------------|
+| Fully Implemented | 49 | 83% |
+| Not Applicable | 4 | 7% |
+| Not Yet Implemented | 6 | 10% |
+| **Total** | **59** | **100%** |
 
-| Component | Status | Notes | Priority |
-|-----------|--------|-------|----------|
-| **Button** | ✅ | All variants (Default, Secondary, Outline, Ghost, Destructive, Link) and sizes (Small, Default, Large, Icon) implemented | **Done** |
-| **Checkbox** | ✅ | Fully implemented with checked, unchecked, indeterminate states, labels, focus rings | **Done** |
-| **Input** | ⚠️ | Basic implementation, missing borders, focus ring | **P0** |
-| **Textarea** | ⚠️ | Basic implementation, missing styling | **P1** |
-| **Switch** | ✅ | Toggle with on/off states, labels, hover/focus rings | **Done** |
-| **Radio Group** | ❌ | Not implemented | **P1** |
-| **Select** | ❌ | Dropdown selection missing | **P1** |
-| **Slider** | ✅ | Draggable slider with range, step support, filled track | **Done** |
-| **Label** | ⚠️ | Have `form_label` but not full component | **P1** |
-| **Form** | ❌ | Form validation/structure missing | **P2** |
-| **Input OTP** | 🚫 | Web-specific, skip | - |
-| **Input Group** | ❌ | Input with prefix/suffix | **P2** |
-| **Native Select** | ❌ | Styled select element | **P2** |
-| **Combobox** | ❌ | Autocomplete missing | **P2** |
-| **Date Picker** | ❌ | Calendar input missing | **P3** |
-| **Toggle** | ❌ | Two-state button | **P2** |
-| **Toggle Group** | ❌ | Button group toggle | **P2** |
+---
 
-### Layout & Structure
+## Fully Implemented Components (49)
 
-| Component | Status | Notes | Priority |
-|-----------|--------|-------|----------|
-| **Card** | ✅ | Good! Has header/content/footer | **Done** |
-| **Separator** | ✅ | Good! Horizontal/vertical | **Done** |
-| **Tabs** | ✅ | Good! Stateful tabs | **Done** |
-| **Accordion** | ❌ | Collapsible sections | **P1** |
-| **Collapsible** | ❌ | Expand/collapse panel | **P1** |
-| **Scroll Area** | 🚫 | egui has native ScrollArea | - |
-| **Resizable** | ❌ | Resizable panels | **P2** |
-| **Aspect Ratio** | ❌ | Maintain aspect ratio | **P3** |
-| **Sidebar** | ❌ | App sidebar component | **P2** |
+### Core Components (8)
 
-### Feedback & Overlays
+| Component | Features | Notes |
+|-----------|----------|-------|
+| **Button** | 6 variants (Default, Secondary, Outline, Ghost, Destructive, Link), 4 sizes (Small, Default, Large, Icon), disabled state | Apple HIG compliant (44px min height) |
+| **Badge** | 4 variants (Default, Secondary, Destructive, Outline), pill-shaped | Compact design |
+| **Avatar** | 4 sizes (32/40/48/64px), automatic initials extraction, circular shape | Fallback to initials |
+| **Card** | Header/content/footer sections, hoverable option, shadows | Composable sections |
+| **Alert** | 2 variants (Default, Destructive), title and description | Theme-aware colors |
+| **Skeleton** | Rectangular and circular variants, animated pulse | Light/dark mode aware |
+| **Kbd** | Styled keyboard shortcut display, monospace font | Subtle shadow for key effect |
+| **Spinner** | 6 sizes (16-56px), animated rotation, track with indicator | Loading indicator |
 
-| Component | Status | Notes | Priority |
-|-----------|--------|-------|----------|
-| **Alert** | ⚠️ | Have it but missing icons, better styling | **P1** |
-| **Toast** | ❌ | Temporary notifications | **P1** |
-| **Dialog** | ❌ | Modal overlay | **P0** |
-| **Alert Dialog** | ❌ | Confirmation dialog | **P1** |
-| **Drawer** | ❌ | Side panel | **P2** |
-| **Sheet** | ❌ | Bottom sheet | **P2** |
-| **Popover** | ❌ | Rich tooltip/popup | **P1** |
-| **Tooltip** | ❌ | Hover info | **P0** |
-| **Hover Card** | ❌ | Preview card on hover | **P2** |
-| **Progress** | ✅ | Progress bar with value, indeterminate mode, pill-shaped | **Done** |
-| **Skeleton** | ✅ | Good! Loading placeholders | **Done** |
-| **Spinner** | ❌ | Loading indicator | **P1** |
+### Form Components (15)
 
-### Navigation
+| Component | Features | Notes |
+|-----------|----------|-------|
+| **Input** | Single-line input styling helpers, placeholder, error state | Works with native egui TextEdit |
+| **Checkbox** | Checked/unchecked/indeterminate states, labels, descriptions, disabled, focus ring | Full accessibility |
+| **Switch** | On/off toggle, labels, thumb shadow, hover effects | Touch-friendly |
+| **Slider** | Range slider with step support, filled track, touch-friendly thumb | Native egui integration |
+| **Progress** | Progress bar, indeterminate mode, customizable height | Animated indeterminate |
+| **Label** | Accessible labels with `for_id` support | Form accessibility |
+| **Textarea** | Multi-line input, configurable rows, placeholder, disabled state | Scrollable |
+| **Toggle** | 2 variants (Default, Outline), 3 sizes | On/off state |
+| **ToggleGroup** | Single/multiple selection, connected buttons, 2 variants | Button group selection |
+| **RadioGroup** | Radio groups with descriptions, single RadioButton widget | Accessible |
+| **Select** | Dropdown selection with popup, placeholder, checkmark indicator | Filterable options |
+| **DropdownMenu** | Action menus with items, separators, labels, shortcuts, destructive items | Full menu system |
+| **Combobox** | Searchable select with filtering, empty state | Type-to-filter |
+| **Field** | Form field wrapper with label, description, error message | Form layout helper |
+| **Form** | FormState with validators, validation helpers | Form management |
 
-| Component | Status | Notes | Priority |
-|-----------|--------|-------|----------|
-| **Navigation Menu** | ❌ | Nav links | **P2** |
-| **Menubar** | ❌ | Desktop-style menu | **P2** |
-| **Breadcrumb** | ❌ | Path navigation | **P2** |
-| **Pagination** | ❌ | Page navigation | **P2** |
-| **Context Menu** | ❌ | Right-click menu | **P2** |
-| **Dropdown Menu** | ❌ | Action menu | **P1** |
-| **Command** | ❌ | Command palette | **P3** |
+### Navigation & Layout Components (10)
 
-### Data Display
+| Component | Features | Notes |
+|-----------|----------|-------|
+| **Separator** | Horizontal and vertical dividers, customizable spacing | Simple divider |
+| **Tabs** | Stateful tabbed interface, underline style | Tab switching |
+| **Accordion** | Single/multiple mode, animated chevron rotation | Collapsible sections |
+| **Collapsible** | Expand/collapse panel with smooth animation | Toggle visibility |
+| **Breadcrumb** | Navigation with chevron/slash separators, customizable | Page hierarchy |
+| **Sidebar** | Collapsible navigation with sections, groups, items | App navigation |
+| **NavigationMenu** | Website navigation with dropdown menus | Top nav bar |
+| **Menubar** | Application menus (File, Edit, View, etc.) | Desktop app menus |
+| **Pagination** | Page navigation with prev/next, page numbers, ellipsis | Large datasets |
+| **Resizable** | Draggable split panels, horizontal/vertical, min/max sizes | Panel layouts |
 
-| Component | Status | Notes | Priority |
-|-----------|--------|-------|----------|
-| **Avatar** | ✅ | Good! Initials extraction | **Done** |
-| **Badge** | ✅ | Good! 4 variants | **Done** |
-| **Kbd** | ✅ | Good! Keyboard shortcuts | **Done** |
-| **Table** | ❌ | Data table | **P2** |
-| **Data Table** | ❌ | Advanced table | **P3** |
-| **Carousel** | ❌ | Image carousel | **P3** |
-| **Chart** | ❌ | Data visualization | **P3** |
-| **Typography** | ⚠️ | Have scale, need components | **P1** |
-| **Empty** | ❌ | Empty state display | **P2** |
+### Overlay & Dialog Components (10)
 
-### Utility
+| Component | Features | Notes |
+|-----------|----------|-------|
+| **Dialog** | Modal with backdrop, title, description, close button, escape key | General modals |
+| **AlertDialog** | Confirmation dialogs, destructive actions, cancel/confirm buttons | Confirmations |
+| **Tooltip** | `TooltipExt` trait for responses, themed styling | Hover info |
+| **Toast** | Toaster system, 4 variants (default, success, error, warning), auto-dismiss | Notifications |
+| **Popover** | Floating panel on click, positioned below trigger | Rich content popup |
+| **HoverCard** | Preview card on hover with configurable delays | User previews |
+| **Sheet** | Slide-out panel from 4 sides (top/right/bottom/left), title/description | Side panels |
+| **Drawer** | Mobile-friendly slide panel with handle, 4 sides | Mobile navigation |
+| **ContextMenu** | Right-click menus with items, separators, shortcuts, destructive items | Context actions |
+| **Command** | Command palette (Cmd+K style), groups, search filtering, shortcuts | Quick actions |
 
-| Component | Status | Notes | Priority |
-|-----------|--------|-------|----------|
-| **Field** | ❌ | Form field wrapper | **P2** |
-| **Item** | ❌ | Generic content container | **P3** |
-| **Button Group** | ❌ | Grouped buttons | **P2** |
-| **Sonner** | 🚫 | React-specific toast | - |
-| **Calendar** | ❌ | Date calendar | **P3** |
+### Data Display Components (6)
 
-## Summary Statistics
+| Component | Features | Notes |
+|-----------|----------|-------|
+| **Table** | Striped rows, hoverable, header styling, `simple_table` helper | Data tables |
+| **Calendar** | Date selection, month/year dropdowns, min/max dates, range mode | Date picker core |
+| **Chart** | Bar, Line, Area chart types, grid lines, labels, custom colors | Data visualization |
+| **DatePicker** | Trigger button + calendar popup, date formatting, min/max constraints | Date input |
+| **Carousel** | Horizontal/vertical orientation, dot indicators, nav buttons, looping | Content slider |
+| **AspectRatio** | Maintains aspect ratio, presets (Square, Video, Photo, etc.), min/max width | Image containers |
 
-- **Total Components**: 59
-- **Fully Implemented**: 11 (19%)
-- **Partially Implemented**: 3 (5%)
-- **Not Implemented**: 41 (69%)
-- **Not Applicable**: 4 (7%)
+---
 
-## Implementation Phases
+## Not Applicable Components (4)
 
-### Phase 0: Critical Fixes (IMMEDIATE)
-These make the biggest visual impact:
+These components don't make sense to port to egui or are handled natively:
 
-1. **Button Variants** - Default, Outline, Ghost, Destructive, Link
-2. **Proper Focus Rings** - 2px ring on all interactive elements
-3. **Input Borders** - 1px border, proper focus state
-4. **Tooltip** - Essential for good UX
-5. **Dialog** - Modal dialogs are fundamental
-6. **Checkbox** - Basic form control
+| Component | Reason |
+|-----------|--------|
+| **Input OTP** | Specialized mobile input pattern, not common in desktop apps |
+| **Scroll Area** | egui has native `ScrollArea` with full functionality |
+| **Sonner** | React-specific toast library, we have Toast component |
+| **Typography** | egui handles text styling through `RichText` and theme |
 
-### Phase 1: Essential Form Controls (HIGH PRIORITY)
-Complete the form story:
+---
 
-7. **Switch** - Toggle component
-8. **Radio Group** - Radio buttons
-9. **Select/Dropdown** - Selection component
-10. **Slider** - Range input
-11. **Progress** - Progress indicator
-12. **Textarea improvements** - Better styling
+## Not Yet Implemented (6)
 
-### Phase 2: Enhanced Components (MEDIUM PRIORITY)
-Polish existing and add common components:
+| Component | Priority | Notes |
+|-----------|----------|-------|
+| **Data Table** | P2 | Enhanced Table with sorting, filtering, pagination (Table covers basic needs) |
+| **Empty State** | P3 | Generic empty state display component |
+| **Input Group** | P3 | Input with prefix/suffix elements |
+| **Button Group** | P3 | Grouped button container |
+| **Item** | P3 | Generic content container |
+| **Native Select** | P3 | Native-styled select (Select component exists) |
 
-13. **Toast** - Notifications
-14. **Alert improvements** - Icons, better variants
-15. **Accordion** - Collapsible sections
-16. **Popover** - Rich tooltips
-17. **Dropdown Menu** - Action menus
-18. **Typography components** - Heading, Paragraph, etc.
-19. **Spinner** - Loading indicator
+---
 
-### Phase 3: Advanced Features (LOWER PRIORITY)
-Nice-to-have components:
+## Design System Status
 
-20. **Table** - Data tables
-21. **Carousel** - Image sliders
-22. **Calendar** - Date picker
-23. **Command Palette**
-24. **Navigation components**
-25. **Resizable panels**
+### Fully Implemented
 
-## Detailed Action Items
+| System | Status | Notes |
+|--------|--------|-------|
+| **Colors** | Complete | Light/dark mode, semantic tokens, notedeck purple (#CC43C5) |
+| **Spacing** | Complete | Tailwind-based scale (xs=4px through 2xl=48px) |
+| **Typography** | Complete | Size scale (xs-4xl), heading styles (h1-h6) |
+| **Border Radius** | Complete | sm=4px through full=9999px (pill) |
+| **Shadows** | Complete | xs through 2xl elevation levels |
+| **Focus Rings** | Complete | Accessible focus indicators |
 
-### Button ✅ COMPLETE
-**Status**: Fully implemented with all shadcn variants and sizes
-**Features**:
-- [x] Variants: `default`, `outline`, `ghost`, `destructive`, `link`, `secondary`
-- [x] Sizes: `sm`, `default`, `lg`, `icon`
-- [x] Disabled state
-- [x] Proper focus ring (2px ring on hover)
-- [x] Hover/pressed states with color transitions
-- [x] Link variant with underline on hover
-- [ ] With icon support (future enhancement)
-- [ ] Loading state (future enhancement)
+---
 
-### Input (P0)
-**Current**: Basic TextEdit wrapper
-**Needed**:
-- [ ] 1px border (`theme.colors.input`)
-- [ ] Focus ring (2px `theme.colors.ring`)
-- [ ] Proper padding
-- [ ] Disabled state
-- [ ] Error state (red border)
-- [ ] File input variant
+## Testing Coverage
 
-### Checkbox (P0)
-**Needed**:
-- [ ] Custom checkbox widget
-- [ ] Checkmark icon
-- [ ] Indeterminate state
-- [ ] Disabled state
-- [ ] Focus ring
-- [ ] Label integration
+All components include:
+- Basic unit tests for creation and configuration
+- Builder pattern validation
+- Default value verification
 
-### Dialog (P0)
-**Needed**:
-- [ ] Modal overlay
-- [ ] Backdrop (semi-transparent)
-- [ ] Close button
-- [ ] Header/content/footer structure
-- [ ] Escape to close
-- [ ] Focus trap
+---
 
-### Tooltip (P0)
-**Needed**:
-- [ ] Hover-triggered popup
-- [ ] Positioning (top, bottom, left, right)
-- [ ] Arrow pointer
-- [ ] Delay before show
-- [ ] Keyboard accessible
+## Known Limitations
 
-## Next Steps
+1. **Animations**: Limited animation support compared to web (egui is immediate-mode)
+2. **Icons**: No icon library bundled; components use custom-drawn icons or Unicode
+3. **Drag & Drop**: Not implemented for components like Carousel (would need egui drag support)
+4. **Keyboard Navigation**: Basic support; full arrow-key navigation not in all components
 
-1. Start with **Phase 0** components
-2. Update showcase to demonstrate all variants
-3. Add visual regression testing
-4. Create component gallery documentation
-5. Iterate based on visual comparison with shadcn
+---
 
-## References
+## Changelog
 
-- shadcn/ui Components: https://ui.shadcn.com/docs/components
-- Each component has detailed examples and code
-
+### December 28, 2025
+- Complete audit of all 59 shadcn/ui components
+- 49 components fully implemented (83%)
+- Updated documentation to reflect current state
+- Removed outdated "Phase" planning sections as most work is complete
