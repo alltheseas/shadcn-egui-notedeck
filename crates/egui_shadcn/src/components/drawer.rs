@@ -1,11 +1,12 @@
 //! Drawer component ported from shadcn/ui
 //!
-//! A drawer panel that slides in from an edge, typically used for
-//! mobile navigation or additional content panels.
+//! A drawer panel that slides in from an edge with smooth animations,
+//! typically used for mobile navigation or additional content panels.
 //!
 //! Reference: <https://ui.shadcn.com/docs/components/drawer>
 
-use egui::{Id, Ui, Color32, Rect, Pos2, Vec2};
+use egui::{Id, Ui, Color32, Rect, Pos2, Vec2, Sense};
+use crate::animation::SlideAnimation;
 use crate::theme::ShadcnTheme;
 
 /// Side from which the drawer slides in
@@ -93,20 +94,40 @@ impl<'a> Drawer<'a> {
 
     /// Show the drawer
     pub fn show<R>(self, ui: &mut Ui, content: impl FnOnce(&mut Ui) -> R) -> Option<R> {
-        if !*self.open {
-            return None;
-        }
-
         let theme = ui.ctx().data(|d| {
             d.get_temp::<ShadcnTheme>(Id::new("shadcn_theme"))
                 .unwrap_or_else(ShadcnTheme::light)
         });
 
+        // Load animation state
+        let anim_id = self.id.with("anim");
+        let mut anim = SlideAnimation::load(ui.ctx(), anim_id);
+
+        // Determine target: 0.0 = fully visible, 1.0 = fully hidden
+        let target = if *self.open { 0.0 } else { 1.0 };
+
+        // Start animation if we're not at target
+        if (anim.offset - target).abs() > 0.001 {
+            anim.opening = *self.open;
+            anim.animating = true;
+        }
+
+        // Update animation
+        anim.update(ui.ctx());
+
+        // Store animation state
+        anim.store(ui.ctx(), anim_id);
+
+        // Don't render if fully closed
+        if !*self.open && anim.offset >= 0.999 {
+            return None;
+        }
+
         #[allow(deprecated)]
         let screen_rect = ui.ctx().screen_rect();
         let mut result = None;
 
-        // Calculate drawer dimensions first
+        // Calculate drawer dimensions
         let default_size = match self.side {
             DrawerSide::Top | DrawerSide::Bottom => 340.0,
             DrawerSide::Left | DrawerSide::Right => 380.0,
@@ -114,54 +135,91 @@ impl<'a> Drawer<'a> {
         let size = self.size.unwrap_or(default_size);
         let r = theme.radii.xl;
 
+        // Calculate the offset translation based on animation progress
+        let offset_amount = anim.offset;
+
         let (drawer_rect, corner_radius) = match self.side {
             DrawerSide::Bottom => {
+                let base_y = screen_rect.bottom() - size;
+                let translate_y = size * offset_amount;
                 let rect = Rect::from_min_size(
-                    Pos2::new(screen_rect.left(), screen_rect.bottom() - size),
+                    Pos2::new(screen_rect.left(), base_y + translate_y),
                     Vec2::new(screen_rect.width(), size),
                 );
                 (rect, egui::CornerRadius { nw: r, ne: r, sw: 0, se: 0 })
             }
             DrawerSide::Top => {
+                let translate_y = -size * offset_amount;
                 let rect = Rect::from_min_size(
-                    screen_rect.left_top(),
+                    Pos2::new(screen_rect.left(), screen_rect.top() + translate_y),
                     Vec2::new(screen_rect.width(), size),
                 );
                 (rect, egui::CornerRadius { nw: 0, ne: 0, sw: r, se: r })
             }
             DrawerSide::Left => {
+                let translate_x = -size * offset_amount;
                 let rect = Rect::from_min_size(
-                    screen_rect.left_top(),
+                    Pos2::new(screen_rect.left() + translate_x, screen_rect.top()),
                     Vec2::new(size, screen_rect.height()),
                 );
                 (rect, egui::CornerRadius { nw: 0, ne: r, sw: 0, se: r })
             }
             DrawerSide::Right => {
+                let base_x = screen_rect.right() - size;
+                let translate_x = size * offset_amount;
                 let rect = Rect::from_min_size(
-                    Pos2::new(screen_rect.right() - size, screen_rect.top()),
+                    Pos2::new(base_x + translate_x, screen_rect.top()),
                     Vec2::new(size, screen_rect.height()),
                 );
                 (rect, egui::CornerRadius { nw: r, ne: 0, sw: r, se: 0 })
             }
         };
 
-        // Draw backdrop overlay - just visual, no interaction capture
+        // Draw backdrop overlay with animated alpha
+        let backdrop_alpha = ((1.0 - offset_amount) * 128.0) as u8;
         let backdrop_layer = egui::LayerId::new(egui::Order::Middle, self.id.with("backdrop_layer"));
         ui.ctx().layer_painter(backdrop_layer).rect_filled(
             screen_rect,
             0.0,
-            Color32::from_black_alpha(128),
+            Color32::from_black_alpha(backdrop_alpha),
         );
 
-        // Check for clicks outside the drawer panel - only on primary button release
-        let pointer_pos = ui.ctx().input(|i| i.pointer.interact_pos());
-        let primary_released = ui.ctx().input(|i| i.pointer.primary_released());
-        let clicked_outside = primary_released
-            && pointer_pos.map(|p| !drawer_rect.contains(p)).unwrap_or(false);
+        // Check for clicks outside the drawer panel (only when mostly open)
+        if offset_amount < 0.3 {
+            let pointer_pos = ui.ctx().input(|i| i.pointer.latest_pos());
+            let primary_pressed = ui.ctx().input(|i| i.pointer.primary_pressed());
 
-        if clicked_outside {
-            *self.open = false;
-            return None;
+            // Calculate the visible drawer rect (accounting for animation)
+            let visible_rect = match self.side {
+                DrawerSide::Bottom => Rect::from_min_size(
+                    Pos2::new(screen_rect.left(), screen_rect.bottom() - size * (1.0 - offset_amount)),
+                    Vec2::new(screen_rect.width(), size),
+                ),
+                DrawerSide::Top => Rect::from_min_size(
+                    screen_rect.left_top(),
+                    Vec2::new(screen_rect.width(), size * (1.0 - offset_amount)),
+                ),
+                DrawerSide::Left => Rect::from_min_size(
+                    screen_rect.left_top(),
+                    Vec2::new(size * (1.0 - offset_amount), screen_rect.height()),
+                ),
+                DrawerSide::Right => Rect::from_min_size(
+                    Pos2::new(screen_rect.right() - size * (1.0 - offset_amount), screen_rect.top()),
+                    Vec2::new(size, screen_rect.height()),
+                ),
+            };
+
+            let clicked_outside = primary_pressed
+                && pointer_pos.map(|p| !visible_rect.contains(p)).unwrap_or(false);
+
+            if clicked_outside {
+                *self.open = false;
+                // Re-store animation state to start closing immediately
+                anim.opening = false;
+                anim.animating = true;
+                anim.store(ui.ctx(), anim_id);
+                ui.ctx().request_repaint();
+            }
         }
 
         // Draw the drawer panel
@@ -181,6 +239,43 @@ impl<'a> Drawer<'a> {
                     ui.set_max_size(drawer_rect.size());
 
                     ui.vertical(|ui| {
+                        // Draw handle for bottom/top drawers
+                        if self.show_handle && matches!(self.side, DrawerSide::Bottom | DrawerSide::Top) {
+                            ui.add_space(8.0);
+                            ui.horizontal(|ui| {
+                                let handle_width = 48.0;
+                                let handle_height = 4.0;
+                                let available_width = ui.available_width();
+                                ui.add_space((available_width - handle_width) / 2.0);
+
+                                let (handle_rect, handle_response) = ui.allocate_exact_size(
+                                    Vec2::new(handle_width, handle_height),
+                                    Sense::click(),
+                                );
+
+                                let handle_color = if handle_response.hovered() {
+                                    theme.colors.muted_foreground
+                                } else {
+                                    theme.colors.border
+                                };
+
+                                ui.painter().rect_filled(
+                                    handle_rect,
+                                    handle_height / 2.0,
+                                    handle_color,
+                                );
+
+                                if handle_response.clicked() {
+                                    *self.open = false;
+                                    ui.ctx().request_repaint();
+                                }
+                                if handle_response.hovered() {
+                                    ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+                                }
+                            });
+                            ui.add_space(8.0);
+                        }
+
                         // Content area with padding
                         ui.add_space(theme.spacing.md);
                         ui.horizontal(|ui| {
@@ -221,6 +316,7 @@ impl<'a> Drawer<'a> {
         // Handle escape key
         if ui.ctx().input(|i| i.key_pressed(egui::Key::Escape)) {
             *self.open = false;
+            ui.ctx().request_repaint();
         }
 
         result

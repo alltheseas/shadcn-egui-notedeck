@@ -940,6 +940,7 @@ impl eframe::App for ShowcaseApp {
                     self.drawer_open = true;
                 }
             });
+            let mut close_drawer = false;
             Drawer::new("demo_drawer", &mut self.drawer_open)
                 .side(DrawerSide::Bottom)
                 .title("Move Goal")
@@ -950,8 +951,13 @@ impl eframe::App for ShowcaseApp {
                     ui.add(Slider::new(&mut self.slider_value, 0.0..=500.0));
                     ui.label(format!("{:.0} cal", self.slider_value));
                     ui.add_space(16.0);
-                    ui.add(Button::new("Submit"));
+                    if ui.add(Button::new("Submit")).clicked() {
+                        close_drawer = true;
+                    }
                 });
+            if close_drawer {
+                self.drawer_open = false;
+            }
 
             ui.add_space(16.0);
 

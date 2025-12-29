@@ -1,10 +1,11 @@
 //! Sheet component ported from shadcn/ui
 //!
-//! A slide-out panel that appears from the edge of the screen.
+//! A slide-out panel that appears from the edge of the screen with smooth animations.
 //!
 //! Reference: <https://ui.shadcn.com/docs/components/sheet>
 
 use egui::{Id, Ui, Sense, Color32, Rect, Pos2, Vec2};
+use crate::animation::SlideAnimation;
 use crate::theme::ShadcnTheme;
 
 /// Side from which the sheet slides in
@@ -93,94 +94,135 @@ impl<'a> Sheet<'a> {
 
     /// Show the sheet
     pub fn show<R>(self, ui: &mut Ui, content: impl FnOnce(&mut Ui) -> R) -> Option<R> {
-        if !*self.open {
-            return None;
-        }
-
         let theme = ui.ctx().data(|d| {
             d.get_temp::<ShadcnTheme>(Id::new("shadcn_theme"))
                 .unwrap_or_else(ShadcnTheme::light)
         });
 
+        // Load animation state
+        let anim_id = self.id.with("anim");
+        let mut anim = SlideAnimation::load(ui.ctx(), anim_id);
+
+        // Determine target: 0.0 = fully visible, 1.0 = fully hidden
+        let target = if *self.open { 0.0 } else { 1.0 };
+
+        // Start animation if we're not at target
+        if (anim.offset - target).abs() > 0.001 {
+            anim.opening = *self.open;
+            anim.animating = true;
+        }
+
+        // Update animation
+        anim.update(ui.ctx());
+
+        // Store animation state
+        anim.store(ui.ctx(), anim_id);
+
+        // Don't render if fully closed
+        if !*self.open && anim.offset >= 0.999 {
+            return None;
+        }
+
         #[allow(deprecated)]
         let screen_rect = ui.ctx().screen_rect();
         let mut result = None;
 
-        // Calculate sheet dimensions and position first
+        // Calculate sheet dimensions
         let default_width = 400.0;
         let default_height = 300.0;
 
         let r = theme.radii.lg;
-        let (sheet_rect, corner_radius) = match self.side {
+        let sheet_width = self.width.unwrap_or(default_width);
+        let sheet_height = self.height.unwrap_or(default_height);
+
+        // Calculate the offset translation based on animation progress
+        let offset_amount = anim.offset;
+
+        let (sheet_rect, corner_radius, translate) = match self.side {
             SheetSide::Right => {
-                let width = self.width.unwrap_or(default_width);
+                let base_x = screen_rect.right() - sheet_width;
+                let translate_x = sheet_width * offset_amount;
                 let rect = Rect::from_min_size(
-                    Pos2::new(screen_rect.right() - width, screen_rect.top()),
-                    Vec2::new(width, screen_rect.height()),
+                    Pos2::new(base_x + translate_x, screen_rect.top()),
+                    Vec2::new(sheet_width, screen_rect.height()),
                 );
                 let radius = egui::CornerRadius { nw: r, sw: r, ne: 0, se: 0 };
-                (rect, radius)
+                (rect, radius, Vec2::new(translate_x, 0.0))
             }
             SheetSide::Left => {
-                let width = self.width.unwrap_or(default_width);
+                let translate_x = -sheet_width * offset_amount;
                 let rect = Rect::from_min_size(
-                    screen_rect.left_top(),
-                    Vec2::new(width, screen_rect.height()),
+                    Pos2::new(screen_rect.left() + translate_x, screen_rect.top()),
+                    Vec2::new(sheet_width, screen_rect.height()),
                 );
                 let radius = egui::CornerRadius { nw: 0, sw: 0, ne: r, se: r };
-                (rect, radius)
+                (rect, radius, Vec2::new(translate_x, 0.0))
             }
             SheetSide::Top => {
-                let height = self.height.unwrap_or(default_height);
+                let translate_y = -sheet_height * offset_amount;
                 let rect = Rect::from_min_size(
-                    screen_rect.left_top(),
-                    Vec2::new(screen_rect.width(), height),
+                    Pos2::new(screen_rect.left(), screen_rect.top() + translate_y),
+                    Vec2::new(screen_rect.width(), sheet_height),
                 );
                 let radius = egui::CornerRadius { nw: 0, ne: 0, sw: r, se: r };
-                (rect, radius)
+                (rect, radius, Vec2::new(0.0, translate_y))
             }
             SheetSide::Bottom => {
-                let height = self.height.unwrap_or(default_height);
+                let base_y = screen_rect.bottom() - sheet_height;
+                let translate_y = sheet_height * offset_amount;
                 let rect = Rect::from_min_size(
-                    Pos2::new(screen_rect.left(), screen_rect.bottom() - height),
-                    Vec2::new(screen_rect.width(), height),
+                    Pos2::new(screen_rect.left(), base_y + translate_y),
+                    Vec2::new(screen_rect.width(), sheet_height),
                 );
                 let radius = egui::CornerRadius { nw: r, ne: r, sw: 0, se: 0 };
-                (rect, radius)
+                (rect, radius, Vec2::new(0.0, translate_y))
             }
         };
 
-        // Draw backdrop overlay - just visual, no interaction capture
+        // Draw backdrop overlay with animated alpha
+        let backdrop_alpha = ((1.0 - offset_amount) * 128.0) as u8;
         let backdrop_layer = egui::LayerId::new(egui::Order::Middle, self.id.with("backdrop_layer"));
         ui.ctx().layer_painter(backdrop_layer).rect_filled(
             screen_rect,
             0.0,
-            Color32::from_black_alpha(128),
+            Color32::from_black_alpha(backdrop_alpha),
         );
 
-        // Track when sheet was opened to avoid closing immediately
-        let opened_time_id = self.id.with("opened_time");
-        let current_time = ui.ctx().input(|i| i.time);
-        let opened_time: f64 = ui.ctx().data(|d| d.get_temp(opened_time_id).unwrap_or(current_time));
+        // Check for clicks outside the sheet panel (only when mostly open)
+        if offset_amount < 0.3 {
+            let pointer_pos = ui.ctx().input(|i| i.pointer.latest_pos());
+            let primary_pressed = ui.ctx().input(|i| i.pointer.primary_pressed());
 
-        // Store current time as opened time if this is first frame
-        if (current_time - opened_time).abs() < 0.001 {
-            ui.ctx().data_mut(|d| d.insert_temp(opened_time_id, current_time));
-        }
+            // Calculate the visible sheet rect (accounting for animation)
+            let visible_rect = match self.side {
+                SheetSide::Right => Rect::from_min_size(
+                    Pos2::new(screen_rect.right() - sheet_width * (1.0 - offset_amount), screen_rect.top()),
+                    Vec2::new(sheet_width, screen_rect.height()),
+                ),
+                SheetSide::Left => Rect::from_min_size(
+                    screen_rect.left_top(),
+                    Vec2::new(sheet_width * (1.0 - offset_amount), screen_rect.height()),
+                ),
+                SheetSide::Top => Rect::from_min_size(
+                    screen_rect.left_top(),
+                    Vec2::new(screen_rect.width(), sheet_height * (1.0 - offset_amount)),
+                ),
+                SheetSide::Bottom => Rect::from_min_size(
+                    Pos2::new(screen_rect.left(), screen_rect.bottom() - sheet_height * (1.0 - offset_amount)),
+                    Vec2::new(screen_rect.width(), sheet_height),
+                ),
+            };
 
-        // Check for clicks outside the sheet panel - only after 100ms delay
-        let time_open = current_time - opened_time;
-        if time_open > 0.1 {
-            let pointer_pos = ui.ctx().input(|i| i.pointer.interact_pos());
-            let primary_released = ui.ctx().input(|i| i.pointer.primary_released());
-            let clicked_outside = primary_released
-                && pointer_pos.map(|p| !sheet_rect.contains(p)).unwrap_or(false);
+            let clicked_outside = primary_pressed
+                && pointer_pos.map(|p| !visible_rect.contains(p)).unwrap_or(false);
 
             if clicked_outside {
-                // Clear the opened time tracking
-                ui.ctx().data_mut(|d| d.remove::<f64>(opened_time_id));
                 *self.open = false;
-                return None;
+                // Re-store animation state to start closing immediately
+                anim.opening = false;
+                anim.animating = true;
+                anim.store(ui.ctx(), anim_id);
+                ui.ctx().request_repaint();
             }
         }
 
@@ -198,8 +240,14 @@ impl<'a> Sheet<'a> {
                     .inner_margin(theme.spacing.lg);
 
                 frame.show(ui, |ui| {
-                    ui.set_min_size(sheet_rect.size() - Vec2::splat(theme.spacing.lg * 2.0));
-                    ui.set_max_size(sheet_rect.size() - Vec2::splat(theme.spacing.lg * 2.0));
+                    ui.set_min_size(Vec2::new(
+                        sheet_width - theme.spacing.lg * 2.0,
+                        sheet_rect.height() - theme.spacing.lg * 2.0,
+                    ));
+                    ui.set_max_size(Vec2::new(
+                        sheet_width - theme.spacing.lg * 2.0,
+                        sheet_rect.height() - theme.spacing.lg * 2.0,
+                    ));
 
                     // Header with close button
                     ui.horizontal(|ui| {
@@ -230,6 +278,7 @@ impl<'a> Sheet<'a> {
 
                             if btn_response.clicked() {
                                 *self.open = false;
+                                ui.ctx().request_repaint();
                             }
                             if btn_response.hovered() {
                                 ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
@@ -269,6 +318,7 @@ impl<'a> Sheet<'a> {
         // Handle escape key to close
         if ui.ctx().input(|i| i.key_pressed(egui::Key::Escape)) {
             *self.open = false;
+            ui.ctx().request_repaint();
         }
 
         result

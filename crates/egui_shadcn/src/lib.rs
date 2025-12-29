@@ -38,6 +38,7 @@
 
 #![warn(missing_docs)]
 
+pub mod animation;
 pub mod theme;
 pub mod components;
 pub mod notedeck;
